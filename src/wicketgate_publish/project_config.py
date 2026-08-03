@@ -9,6 +9,8 @@ import yaml
 DEFAULT_CONFIG_NAME = "wicketgate-publish.yaml"
 DEFAULT_OUTPUT_DIR = "generated"
 
+COMMON_OUTPUT_FIELDS = {"kind", "output_subdir", "destination"}
+
 
 @dataclass(frozen=True)
 class DestinationConfig:
@@ -32,11 +34,66 @@ class OutputConfig:
     name: str
     kind: str
     output_subdir: str
-    content_dir: str
-    templates_dir: str
-    assets_dir: str
-    config_dir: str
-    destination: str | None = None
+    destination: str | None
+    options: dict[str, Any]
+
+    def option(self, key: str, default: Any = None) -> Any:
+        return self.options.get(key, default)
+
+    def require_option(self, key: str) -> Any:
+        if key not in self.options or self.options[key] is None:
+            raise ValueError(f"Output '{self.name}' requires '{key}' for kind '{self.kind}'.")
+        return self.options[key]
+
+    @property
+    def content_dir(self) -> str:
+        return str(self.option("content_dir", "content"))
+
+    @property
+    def templates_dir(self) -> str:
+        return str(self.option("templates_dir", "templates"))
+
+    @property
+    def assets_dir(self) -> str:
+        return str(self.option("assets_dir", "assets"))
+
+    @property
+    def config_dir(self) -> str:
+        return str(self.option("config_dir", "config"))
+
+    @property
+    def source_dir(self) -> str | None:
+        value = self.option("source_dir")
+        return str(value) if value is not None else None
+
+    @property
+    def manuscript_dir(self) -> str | None:
+        value = self.option("manuscript_dir")
+        return str(value) if value is not None else None
+
+    @property
+    def config_file(self) -> str | None:
+        value = self.option("config_file")
+        return str(value) if value is not None else None
+
+    @property
+    def typst_entry(self) -> str | None:
+        value = self.option("typst_entry")
+        return str(value) if value is not None else None
+
+    @property
+    def typst_assets_dir(self) -> str | None:
+        value = self.option("typst_assets_dir")
+        return str(value) if value is not None else None
+
+    @property
+    def output_file(self) -> str:
+        return str(self.option("output_file", f"{self.name}.pdf"))
+
+    @property
+    def emit_typst(self) -> bool:
+        value = self.option("emit_typst", True)
+        return bool(value)
 
     def resolve_output_dir(self, project_root: Path, output_root: Path) -> Path:
         return output_root / self.output_subdir
@@ -52,6 +109,30 @@ class OutputConfig:
 
     def resolve_config_dir(self, project_root: Path) -> Path:
         return project_root / self.config_dir
+
+    def resolve_source_dir(self, project_root: Path) -> Path:
+        source_dir = self.source_dir or self.require_option("source_dir")
+        return project_root / str(source_dir)
+
+    def resolve_manuscript_dir(self, project_root: Path) -> Path:
+        if self.manuscript_dir:
+            return project_root / self.manuscript_dir
+        return self.resolve_source_dir(project_root) / "chapters"
+
+    def resolve_config_file(self, project_root: Path) -> Path:
+        if self.config_file:
+            return project_root / self.config_file
+        return self.resolve_source_dir(project_root) / "book.yaml"
+
+    def resolve_typst_entry(self, project_root: Path) -> Path:
+        if self.typst_entry:
+            return project_root / self.typst_entry
+        return self.resolve_source_dir(project_root) / "typst" / "main.typ"
+
+    def resolve_typst_assets_dir(self, project_root: Path) -> Path:
+        if self.typst_assets_dir:
+            return project_root / self.typst_assets_dir
+        return self.resolve_source_dir(project_root) / "assets"
 
 
 @dataclass(frozen=True)
@@ -125,17 +206,20 @@ def _parse_outputs(raw_outputs: Any) -> dict[str, OutputConfig]:
         if not kind:
             raise ValueError(f"Output '{name}' is missing required field 'kind'.")
 
+        options = {
+            key: option
+            for key, option in value.items()
+            if key not in COMMON_OUTPUT_FIELDS
+        }
+
         outputs[str(name)] = OutputConfig(
             name=str(name),
             kind=str(kind),
             output_subdir=str(value.get("output_subdir") or name),
-            content_dir=str(value.get("content_dir") or "content"),
-            templates_dir=str(value.get("templates_dir") or "templates"),
-            assets_dir=str(value.get("assets_dir") or "assets"),
-            config_dir=str(value.get("config_dir") or "config"),
             destination=(
                 str(value["destination"]) if value.get("destination") is not None else None
             ),
+            options=options,
         )
     return outputs
 

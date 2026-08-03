@@ -1,4 +1,4 @@
-"""Wicketgate static site publisher."""
+"""Wicketgate multi-kind publisher."""
 
 from wicketgate_publish.site import build_site
 

@@ -12,7 +12,7 @@ from wicketgate_publish.publish import describe_destination, publish_outputs
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         prog="wicketgate-publish",
-        description="Build and publish static outputs for Wicketgate projects.",
+        description="Build and publish configured outputs for Wicketgate projects.",
     )
     parser.add_argument(
         "--config",
@@ -87,14 +87,11 @@ def main(argv: list[str] | None = None) -> None:
 def _run_build(config, output_dir: Path | None, outputs: list[str] | None) -> None:
     try:
         results = build_outputs(config, output_root=output_dir, output_names=outputs)
-    except (KeyError, ValueError) as error:
+    except (KeyError, ValueError, FileNotFoundError, EnvironmentError, RuntimeError) as error:
         raise SystemExit(str(error)) from error
 
-    output_root = config.resolve_output_root(output_dir)
-    for name, pages in results.items():
-        output = config.outputs[name]
-        path = output.resolve_output_dir(config.project_root, output_root)
-        print(f"Built {name}: {len(pages)} page(s) -> {path}")
+    for result in results.values():
+        print(result.summary())
 
 
 def _run_publish(config, output_dir: Path | None, outputs: list[str] | None) -> None:

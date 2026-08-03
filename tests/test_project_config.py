@@ -72,6 +72,8 @@ def test_load_publisher_config(tmp_path: Path) -> None:
     assert config.outputs["site"].kind == "static_site"
     assert config.outputs["site"].output_subdir == "site"
     assert config.outputs["site"].destination == "production"
+    assert config.outputs["site"].content_dir == "content"
+    assert config.outputs["site"].options["templates_dir"] == "templates"
     assert config.destinations["production"].kind == "cloudflare_pages"
     assert config.destinations["production"].project_name == "wicketgate-systems"
 
@@ -103,6 +105,34 @@ def test_load_publisher_config_rejects_unknown_destination(tmp_path: Path) -> No
         load_publisher_config(tmp_path)
 
 
+def test_load_publisher_config_typst_book_options(tmp_path: Path) -> None:
+    (tmp_path / "wicketgate-publish.yaml").write_text(
+        "outputs:\n"
+        "  field_guide:\n"
+        "    kind: typst_book\n"
+        "    source_dir: books/field-guide\n"
+        "    manuscript_dir: books/field-guide/chapters\n"
+        "    config_file: books/field-guide/book.yaml\n"
+        "    typst_entry: books/field-guide/typst/main.typ\n"
+        "    output_file: field-guide.pdf\n"
+        "    emit_typst: true\n",
+        encoding="utf-8",
+    )
+
+    config = load_publisher_config(tmp_path)
+    output = config.outputs["field_guide"]
+
+    assert output.kind == "typst_book"
+    assert output.output_subdir == "field_guide"
+    assert output.source_dir == "books/field-guide"
+    assert output.manuscript_dir == "books/field-guide/chapters"
+    assert output.config_file == "books/field-guide/book.yaml"
+    assert output.typst_entry == "books/field-guide/typst/main.typ"
+    assert output.output_file == "field-guide.pdf"
+    assert output.emit_typst is True
+    assert output.resolve_source_dir(tmp_path) == tmp_path / "books" / "field-guide"
+
+
 def test_build_outputs_writes_under_generated(tmp_path: Path) -> None:
     create_project(tmp_path)
     config = load_publisher_config(tmp_path)
@@ -110,5 +140,20 @@ def test_build_outputs_writes_under_generated(tmp_path: Path) -> None:
     results = build_outputs(config)
 
     assert set(results) == {"site"}
+    assert results["site"].kind == "static_site"
+    assert results["site"].item_count == 1
     assert (tmp_path / "generated" / "site" / "index.html").exists()
     assert (tmp_path / "generated" / "site" / "assets" / "css" / "styles.css").exists()
+
+
+def test_build_outputs_rejects_unknown_kind(tmp_path: Path) -> None:
+    (tmp_path / "wicketgate-publish.yaml").write_text(
+        "outputs:\n"
+        "  odd:\n"
+        "    kind: imaginary\n",
+        encoding="utf-8",
+    )
+    config = load_publisher_config(tmp_path)
+
+    with pytest.raises(ValueError, match="Unsupported output kind"):
+        build_outputs(config)

@@ -1,7 +1,7 @@
 [project]
 name = "wicketgate-publish"
 version = "0.1.0"
-description = "A small static site publisher for Wicketgate Systems."
+description = "A small multi-kind publisher for Wicketgate Systems."
 requires-python = ">=3.12"
 dependencies = [
     "jinja2>=3.1",
