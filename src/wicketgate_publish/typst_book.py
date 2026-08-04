@@ -145,7 +145,8 @@ def _chapter_typst(chapter: ChapterDocument) -> str:
         heading = f"#heading(outlined: false)[{_escape_typst_text(chapter.title)}]\n\n"
     else:
         heading = f"= {_escape_typst_text(chapter.title)}\n\n"
-    return heading + chapter.body_typst
+    # Weak breaks skip when already at the top of a page (e.g. after book-prelude).
+    return f"#pagebreak(weak: true)\n\n{heading}{chapter.body_typst}"
 
 def _assemble_book_typst(
     book: BookConfig,

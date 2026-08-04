@@ -136,6 +136,10 @@ The Typst entry file should export a `book-prelude` function:
 }
 ```
 
+Each generated chapter starts with `#pagebreak(weak: true)` so chapters begin on a
+new page without inserting a blank page when the previous content already ended
+with a break (for example after `book-prelude`).
+
 Supported manuscript Markdown is intentionally conservative: headings, paragraphs,
 emphasis, ordered and unordered lists, blockquotes, fenced code, links, images,
 and YAML front matter.

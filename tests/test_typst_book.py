@@ -116,8 +116,12 @@ def test_build_typst_book_writes_generated_sources(
     assert '#include "chapters/01-introduction.typ"' in assembled
     assert 'title: "The Field Guide"' in assembled
 
+    preface = (output_dir / "chapters" / "00-preface.typ").read_text(encoding="utf-8")
+    assert preface.startswith("#pagebreak(weak: true)")
+
     intro = (output_dir / "chapters" / "01-introduction.typ").read_text(encoding="utf-8")
-    assert intro.startswith("= Introduction")
+    assert intro.startswith("#pagebreak(weak: true)")
+    assert "= Introduction" in intro
     assert "*emphasis*" in intro
     assert "- point one" in intro
     assert intro.count("= Introduction") == 1
